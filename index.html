@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Appendix – Source Code</title>
+
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+        }
+
+        a {
+            cursor: pointer;
+            color: #0066cc;
+            text-decoration: underline;
+        }
+
+        pre {
+            background: #f5f5f5;
+            padding: 1em;
+            overflow-x: auto;
+        }
+
+        #lock-screen {
+            text-align: center;
+            margin-top: 100px;
+        }
+
+        #error {
+            color: red;
+        }
+    </style>
+</head>
+
+<body>
+
+<div id="lock-screen">
+    <h2>Appendix – Source Code</h2>
+    <p>Enter password to view files</p>
+    <input type="password" id="password">
+    <button onclick="checkPassword()">Unlock</button>
+    <p id="error"></p>
+</div>
+
+<div id="protected" style="display:none;">
+
+    <h2>Appendix – Source Code</h2>
+
+    <div id="file-list">
+        <p>Select a file:</p>
+        <a onclick="openFile('files/tom.py')">tom.py</a><br>
+        <a onclick="openFile('files/hbt.py')">hbt.py</a><br>
+        <a onclick="openFile('files/base.py')">base.py</a>
+    </div>
+
+    <div id="code-view" style="display:none;">
+        <p><a onclick="goBack()">← Back to file list</a></p>
+        <pre id="code"></pre>
+    </div>
+
+</div>
+
+<script>
+    const PASSWORD = "HHSquEDU";
+
+    function checkPassword() {
+        const input = document.getElementById("password").value;
+
+        if (input === PASSWORD) {
+            sessionStorage.setItem("unlocked", "true");
+            unlock();
+        } else {
+            document.getElementById("error").textContent = "Incorrect password";
+        }
+    }
+
+    function unlock() {
+        document.getElementById("lock-screen").style.display = "none";
+        document.getElementById("protected").style.display = "block";
+    }
+
+    if (sessionStorage.getItem("unlocked") === "true") {
+        unlock();
+    }
+
+    function openFile(path) {
+        fetch(path)
+            .then(r => r.text())
+            .then(text => {
+                document.getElementById("code").textContent = text;
+                document.getElementById("file-list").style.display = "none";
+                document.getElementById("code-view").style.display = "block";
+            });
+    }
+
+    function goBack() {
+        document.getElementById("code-view").style.display = "none";
+        document.getElementById("file-list").style.display = "block";
+        document.getElementById("code").textContent = "";
+    }
+</script>
+
+</body>
+</html>
