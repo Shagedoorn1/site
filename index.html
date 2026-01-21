@@ -1,106 +1,228 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <meta charset="utf-8">
-    <title>Appendix – Source Code</title>
 
-    <style>
-        body {
-            font-family: sans-serif;
-            max-width: 900px;
-            margin: 40px auto;
-        }
+    <head>
+        <meta charset="utf-8">
+        <title>Appendix – Source Code & Data</title>
 
-        a {
-            cursor: pointer;
-            color: #0066cc;
-            text-decoration: underline;
-        }
+        <style>
+            body {
+                font-family: sans-serif;
+                max-width: 900px;
+                margin: 40px auto;
+            }
 
-        pre {
-            background: #f5f5f5;
-            padding: 1em;
-            overflow-x: auto;
-        }
+            a {
+                cursor: pointer;
+                color: #0066cc;
+                text-decoration: underline;
+            }
 
-        #lock-screen {
-            text-align: center;
-            margin-top: 100px;
-        }
+            pre {
+                background: #f5f5f5;
+                padding: 1em;
+                overflow-x: auto;
+            }
 
-        #error {
-            color: red;
-        }
-    </style>
-</head>
+            #lock-screen {
+                text-align: center;
+                margin-top: 100px;
+            }
 
-<body>
+            #error {
+                color: red;
+            }
 
-<div id="lock-screen">
-    <h2>Appendix – Source Code</h2>
-    <p>Enter password to view files</p>
-    <input type="password" id="password">
-    <button onclick="checkPassword()">Unlock</button>
-    <p id="error"></p>
-</div>
+            table {
+                border-collapse: collapse;
+                margin-top: 1em;
+                font-size: 0.9em;
+            }
 
-<div id="protected" style="display:none;">
+            th, td {
+                border: 1px solid #ccc;
+                padding: 6px 10px;
+                text-align: right;
+            }
 
-    <h2>Appendix – Source Code</h2>
+            th {
+                background: #eee;
+                font-weight: bold;
+            }
 
-    <div id="file-list">
-        <p>Select a file:</p>
-        <a onclick="openFile('files/tom.py')">tom.py</a><br>
-        <a onclick="openFile('files/hbt.py')">hbt.py</a><br>
-        <a onclick="openFile('files/base.py')">base.py</a>
+            tr:nth-child(even) {
+                background: #f9f9f9;
+            }
+        </style>
+    </head>
+
+    <body>
+
+    <!-- Lock screen -->
+    <div id="lock-screen">
+        <h2>Appendix – Source Code & Data</h2>
+        <p>Enter password to view files</p>
+        <input type="password" id="password">
+        <button onclick="checkPassword()">Unlock</button>
+        <p id="error"></p>
     </div>
 
-    <div id="code-view" style="display:none;">
-        <p><a onclick="goBack()">← Back to file list</a></p>
-        <pre id="code"></pre>
+    <!-- Protected content -->
+    <div id="protected" style="display:none;">
+
+        <h2>Appendix – Source Code & Data</h2>
+
+        <div id="file-list">
+            <h3>Code</h3>
+            <a onclick="openTextFile('files/tom.py')">tom.py</a><br>
+            <a onclick="openTextFile('files/hbt.py')">hbt.py</a><br>
+            <a onclick="openTextFile('files/base.py')">base.py</a>
+
+            <h3>Data</h3>
+            <a onclick="openCSV('data/hbt_data.csv')">hbt_data.csv</a><br>
+            <a onclick="openCSV('data/tom_counts_1000.csv')">tom_counts_1000.csv</a><br>
+            <a onclick="openCSV('data/tom_counts_1000_diag.csv')">tom_counts_1000_diag.csv</a><br>
+            <a onclick="openCSV('data/tom_counts_1qubit.csv')">tom_counts_1qubit.csv</a><br>
+            <a onclick="openCSV('data/tom_counts_diag_1qubit.csv')">tom_counts_diag_1qubit.csv</a>
+        </div>
+
+        <!-- Code view -->
+        <div id="code-view" style="display:none;">
+            <p><a onclick="goBack()">← Back to file list</a></p>
+            <pre id="code"></pre>
+        </div>
+
+        <!-- CSV table view -->
+        <div id="table-view" style="display:none;">
+            <p><a onclick="goBack()">← Back to file list</a></p>
+            <div id="table-container"></div>
+        </div>
+
     </div>
 
-</div>
+    <script>
+        const PASSWORD = "HHSquEDU";
 
-<script>
-    const PASSWORD = "HHSquEDU";
+        function checkPassword() {
+            const input = document.getElementById("password").value;
 
-    function checkPassword() {
-        const input = document.getElementById("password").value;
+            if (input === PASSWORD) {
+                sessionStorage.setItem("unlocked", "true");
+                unlock();
+            } else {
+                document.getElementById("error").textContent = "Incorrect password";
+            }
+        }
 
-        if (input === PASSWORD) {
-            sessionStorage.setItem("unlocked", "true");
+        function unlock() {
+            document.getElementById("lock-screen").style.display = "none";
+            document.getElementById("protected").style.display = "block";
+        }
+
+        if (sessionStorage.getItem("unlocked") === "true") {
             unlock();
-        } else {
-            document.getElementById("error").textContent = "Incorrect password";
         }
-    }
 
-    function unlock() {
-        document.getElementById("lock-screen").style.display = "none";
-        document.getElementById("protected").style.display = "block";
-    }
+        /* ---------- View helpers ---------- */
 
-    if (sessionStorage.getItem("unlocked") === "true") {
-        unlock();
-    }
+        function showView(view) {
+            document.getElementById("file-list").style.display = "none";
+            document.getElementById("code-view").style.display = "none";
+            document.getElementById("table-view").style.display = "none";
 
-    function openFile(path) {
-        fetch(path)
-            .then(r => r.text())
-            .then(text => {
-                document.getElementById("code").textContent = text;
-                document.getElementById("file-list").style.display = "none";
+            if (view === "code") {
                 document.getElementById("code-view").style.display = "block";
-            });
-    }
+            } else if (view === "table") {
+                document.getElementById("table-view").style.display = "block";
+            }
+        }
 
-    function goBack() {
-        document.getElementById("code-view").style.display = "none";
-        document.getElementById("file-list").style.display = "block";
-        document.getElementById("code").textContent = "";
-    }
-</script>
+        function goBack() {
+            document.getElementById("file-list").style.display = "block";
+            document.getElementById("code-view").style.display = "none";
+            document.getElementById("table-view").style.display = "none";
+            document.getElementById("code").textContent = "";
+            document.getElementById("table-container").innerHTML = "";
+        }
 
-</body>
+        /* ---------- Text / code files ---------- */
+
+        function openTextFile(path) {
+            fetch(path)
+                .then(r => r.text())
+                .then(text => {
+                    document.getElementById("code").textContent = text;
+                    showView("code");
+                });
+        }
+
+        /* ---------- CSV handling ---------- */
+
+        function openCSV(path) {
+            fetch(path)
+                .then(r => r.text())
+                .then(text => {
+                    renderCSV(text);
+                    showView("table");
+                });
+        }
+
+        function renderCSV(text) {
+            const rows = text
+                .trim()
+                .split("\n")
+                .map(r => r.split(","));
+
+            let html = "";
+
+            // Detect split-table CSV (like hbt_data.csv)
+            const isSplitTable =
+                rows.length > 3 &&
+                rows[0].length !== rows[2].length;
+
+            if (isSplitTable) {
+                // ---- Summary table ----
+                html += "<h4>Summary statistics</h4>";
+                html += "<table><tr>";
+                rows[0].forEach(h => html += `<th>${h}</th>`);
+                html += "</tr><tr>";
+                rows[1].forEach(v => html += `<td>${v}</td>`);
+                html += "</tr></table>";
+
+                // ---- Raw data table ----
+                html += "<h4>Raw measurements</h4>";
+                html += "<table><tr>";
+                rows[2].forEach(h => html += `<th>${h}</th>`);
+                html += "</tr>";
+
+                for (let i = 3; i < rows.length; i++) {
+                    html += "<tr>";
+                    rows[i].forEach(cell => html += `<td>${cell}</td>`);
+                    html += "</tr>";
+                }
+
+                html += "</table>";
+            } else {
+                // ---- Regular rectangular CSV ----
+                html += "<table>";
+
+                rows.forEach((row, i) => {
+                    html += "<tr>";
+                    row.forEach(cell => {
+                        html += i === 0
+                            ? `<th>${cell}</th>`
+                            : `<td>${cell}</td>`;
+                    });
+                    html += "</tr>";
+                });
+
+                html += "</table>";
+            }
+
+            document.getElementById("table-container").innerHTML = html;
+        }
+
+    </script>
+
+    </body>
 </html>
