@@ -40,6 +40,7 @@ class quEDU_Logic:
         self.connected = False
 
 
+        self.data_coinc = 8
         self.data_channel1 = 9
         self.data_channel2 = 10
         self.data_channel3 = 12
@@ -63,6 +64,7 @@ class quEDU_Logic:
         if self.collector is None:
             raise RuntimeError("Collector not assigned before setting callbacks")
         
+        self.hardware.set_dataCallbackFunction(self.data_coinc,    self.data_callback)
         self.hardware.set_dataCallbackFunction(self.data_channel1, self.data_callback)
         self.hardware.set_dataCallbackFunction(self.data_channel2, self.data_callback)
         self.hardware.set_dataCallbackFunction(self.data_channel3, self.data_callback)
@@ -81,25 +83,31 @@ class quEDU_Logic:
             logic.collector._current_ch3 = data[0]
         elif channel == logic.data_channel4:
             logic.collector._current_ch4 = data[0]
+        elif channel == logic.data_coinc:
+            logic.collector._current_coinc = data[0]
             
 # ------------------- Base HBT -------------------
 class BASE:
-    def __init__(self, logic, n_samples=100):
+    def __init__(self, logic, n_samples=100, filename="base_data.csv"):
         self.logic = logic
         self.n_samples = n_samples
+        self.filename = filename;
         self.data = defaultdict(lambda: {"ch1": [], "ch2": [], "ch3": [], "ch4": [], "coinc12": [], "coinc13": [], "coinc14": [], "coinc23": [], "coinc24": [], "coinc34": []})
+        self._current_coinc = None
         self._current_ch1 = None
         self._current_ch2 = None
         self._current_ch3 = None
         self._current_ch4 = None
     
     def measure(self, pos_name="BASE"):
-        while self._current_ch1 is None or self._current_ch2 is None or self._current_ch3 is None or self._current_ch4 is None:
+        while self._current_coinc is None or self._current_ch1 is None or self._current_ch2 is None or self._current_ch3 is None or self._current_ch4 is None:
             time.sleep(0.01)
+        self.data[pos_name]["coinc12"].append(self._current_coinc)
         self.data[pos_name]["ch1"].append(self._current_ch1)
         self.data[pos_name]["ch2"].append(self._current_ch2)
         self.data[pos_name]["ch3"].append(self._current_ch3)
         self.data[pos_name]["ch4"].append(self._current_ch4)
+        self._current_coinc = None
         self._current_ch1 = None
         self._current_ch2 = None
         self._current_ch3 = None
@@ -134,8 +142,11 @@ class BASE:
         print(f"\nBase measurement complete in {h:01d}:{m:02d}:{s:02d}!")
         self.save_csv()
 
-    def save_csv(self, filename="base_data.csv", n_sigma=2):
+    def save_csv(self, n_sigma=2):
         d = self.data["BASE"]  # your pos_name
+        
+        avg_coinc = np.mean(d["coinc12"]) if d["coinc12"] else 0
+        err_coinc = (n_sigma / np.sqrt(self.n_samples)) * np.std(d["coinc12"], ddof=1) if d["coinc12"] else 0
 
         # Averages & errors
         avg_ch1 = np.mean(d["ch1"]) if d["ch1"] else 0
@@ -151,24 +162,25 @@ class BASE:
         err_ch4 = (n_sigma / np.sqrt(self.n_samples)) * np.std(d["ch4"], ddof=1) if d["ch4"] else 0
 
         # Write averages + errors
-        with open(filename, "w", newline="") as f:
+        with open(self.filename, "w", newline="") as f:
             writer = csv.writer(f)
             writer.writerow([
                 "Avg_ch1", "Err_ch1",
                 "Avg_ch2", "Err_ch2",
                 "Avg_ch3", "Err_ch3",
                 "Avg_ch4", "Err_ch4",
+                "Avg_coinc12", "Err_coinc12",
             ])
             writer.writerow([
                 avg_ch1, err_ch1,
                 avg_ch2, err_ch2,
                 avg_ch3, err_ch3,
                 avg_ch4, err_ch4,
+                avg_coinc, err_coinc,
             ])
 
             # Raw data header
-            writer.writerow([])
-            writer.writerow(["Sample", "ch1", "ch2", "ch3", "ch4"])
+            writer.writerow(["Sample", "ch1", "ch2", "ch3", "ch4", "coinc12"])
             for i in range(self.n_samples):
                 writer.writerow([
                     i+1,
@@ -176,8 +188,9 @@ class BASE:
                     d["ch2"][i] if i < len(d["ch2"]) else "",
                     d["ch3"][i] if i < len(d["ch3"]) else "",
                     d["ch4"][i] if i < len(d["ch4"]) else "",
+                    d["coinc12"][i] if i < len(d["coinc12"]) else "",
                 ])
-        print(f"\nSaved to {filename}")
+        print(f"\nSaved to {self.filename}")
 
 if __name__ == "__main__":
     os.system("cls" if os.name == "nt" else "clear")
@@ -192,7 +205,7 @@ if __name__ == "__main__":
     LogicInstance = quEDU_Logic()
     LogicInstance.connect_device(IP_ADDRESS)
     
-    collector = BASE(LogicInstance, n_samples=10)
+    collector = BASE(LogicInstance, n_samples=1000, filename="site/data/coinc_MM.csv")
     LogicInstance.collector = collector
     
     LogicInstance.set_data_channel_callbacks()
